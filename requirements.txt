@@ -8,3 +8,5 @@ janome
 mecab-python3
 requests_oauthlib
 wordcloud
+matplotlib
+beautifulsoup4

@@ -1,21 +1,22 @@
+# -*- coding: utf-8 -*-
+from CREDENTIAL import ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_KEY_SECRET
 import csv
 import json
-from flask import Flask, request,redirect, send_file, render_template
 import requests
-from requests_oauthlib import OAuth1Session
-from CREDENTIAL import ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_KEY_SECRET
 
-from janome.tokenizer import Tokenizer
+from flask import Flask, request,redirect, send_file, render_template
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 from bs4 import BeautifulSoup
+from janome.tokenizer import Tokenizer
 from collections import Counter, defaultdict
-
+from requests_oauthlib import OAuth1Session
 
 
 app = Flask(__name__, static_folder='static')
 
-
+fpath = "./Koruri-Regular.ttf"
+output = './static/tweet.png'
 def counter(texts):
     t = Tokenizer()
     words_count = defaultdict(int)
@@ -31,6 +32,26 @@ def counter(texts):
     return words_count, words
 
 
+def post_request(value,CONSUMER_KEY=CONSUMER_KEY, CONSUMER_KEY_SECRET=CONSUMER_KEY_SECRET, ACCESS_TOKEN=ACCESS_TOKEN, ACCESS_TOKEN_SECRET=ACCESS_TOKEN_SECRET):
+    url = "https://api.twitter.com/1.1/search/tweets.json"
+    params = {
+              'q': value,
+              'count':200,
+              'exclude': 'retweets'}
+    twitter = OAuth1Session(CONSUMER_KEY, CONSUMER_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+    response = twitter.get(url, params = params)
+    return response
+
+
+def make_corpus(timeline):
+    f_out = open('./tweet.txt', 'w')
+    try:
+      for tweet in timeline['statuses']:
+        f_out.write(tweet['text']+'\n')
+    except:
+      f_out.write(timeline)
+    f_out.close()
+
 @app.route('/')
 def home():
     return render_template("./index.html")
@@ -38,27 +59,17 @@ def home():
 @app.route('/analize', methods=["POST"])
 def analize():
     tweet = request.form["tweet"]
-    url = "https://api.twitter.com/1.1/search/tweets.json"
-    params = {
-              'q': tweet,
-              'count':200,
-              'exclude': 'retweets'}
-    
-    twitter = OAuth1Session(CONSUMER_KEY, CONSUMER_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-    res = twitter.get(url, params = params)
-    print(res)
-    f_out = open('./tweet.txt', 'w')
+    res = post_request(tweet)
     if res.status_code == 200:
       limit = res.headers['x-rate-limit-remaining']
       if limit == 1:
         sleep(60*15)
       n = 0
       timeline = json.loads(res.text)
-      for tweet in timeline['statuses']:
-        f_out.write(tweet['text']+'\n')
-    f_out.close()
+    else:
+      return "false"
     #名詞だけ抽出、単語をカウント
-
+    make_corpus(timeline)
     with open('./tweet.txt','r') as f:
         reader = csv.reader(f, delimiter='\t')
         texts = []
@@ -69,9 +80,8 @@ def analize():
 
     words_count, words = counter(texts)
     text = ' '.join(words)
-    fpath = "./Koruri-Regular.ttf"
     wordcloud = WordCloud(background_color="white", font_path=fpath, width=900, height=500).generate(text)
-    wordcloud.to_file('./static/tweet.png')
+    wordcloud.to_file(output)
     return redirect("result")
 
 @app.route('/result', methods=["GET"])

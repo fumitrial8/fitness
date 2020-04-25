@@ -1,9 +1,9 @@
-pandas==0.24.2
-pillow==7.0.0
-opencv-python==3.4.2.16
-Flask==1.1.2
-scipy==1.4.1
-numpy==1.18.2
+pandas
+pillow
+opencv-python
+Flask
+scipy
+numpy
 janome
 mecab-python3
 requests_oauthlib

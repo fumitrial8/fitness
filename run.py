@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import datetime
 from CREDENTIAL import ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_KEY_SECRET
 import csv
 import json
@@ -14,9 +15,21 @@ from requests_oauthlib import OAuth1Session
 
 
 app = Flask(__name__, static_folder='static')
+@app.after_request
+def add_header(r):
+    """
+    Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also to cache the rendered page for 10 minutes.
+    """
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    r.headers['Cache-Control'] = 'public, max-age=0'
+    return r
 
 fpath = "./Koruri-Regular.ttf"
 output = './static/tweet.png'
+
 def counter(texts):
     t = Tokenizer()
     words_count = defaultdict(int)
@@ -70,7 +83,7 @@ def analize():
       return "false"
     #名詞だけ抽出、単語をカウント
     make_corpus(timeline)
-    with open('./tweet.txt','r') as f:
+    with open('./static/tweet.txt','r') as f:
         reader = csv.reader(f, delimiter='\t')
         texts = []
         for row in reader:
@@ -86,7 +99,8 @@ def analize():
 
 @app.route('/result', methods=["GET"])
 def result():
-    return "<img src='/static/tweet.png' alt='pic01'></img><a href='/'>戻る</a>"
+    query = str(int(datetime.datetime.now().timestamp()))
+    return "<img src='/static/tweet.png?q=%s' alt='pic01'></img><a href='/'>戻る</a>" % query
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
